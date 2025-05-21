@@ -1,0 +1,8 @@
+#!/bin/bash
+
+export PATH=/root/.nvm/versions/node/v24.0.2/bin:/usr/bin:/bin
+
+cd /root/epg
+npm run grab --- --days=14 --channels=/root/channels.conf --output /tmp/guide.xml || exit 1
+
+exit 0
