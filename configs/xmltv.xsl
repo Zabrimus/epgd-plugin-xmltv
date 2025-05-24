@@ -11,6 +11,10 @@
     <xsl:template match="image"/>
     <xsl:template match="episode-num"/>
     <xsl:template match="url"/>
+    <xsl:template match="icon"/>
+    <xsl:template match="star-rating"/>
+    <xsl:template match="new"/>
+    <xsl:template match="live"/>
 
     <xsl:template match="programme">
         <event>
