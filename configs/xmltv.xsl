@@ -1,6 +1,9 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:output method="xml" indent="yes"/>
 
+    <xsl:variable name="mapping" select="document('xmltv-category.xml')/mapping" />
+    <xsl:variable name="categorieMapping" select="$mapping/categories/category/contains" />
+
     <xsl:template match="@* | node()">
         <xsl:copy>
             <xsl:apply-templates select="@* | node()"/>
@@ -23,6 +26,10 @@
             </xsl:attribute>
 
             <xsl:apply-templates select="@* | node()"/>
+
+            <xsl:call-template name="mapping">
+                <xsl:with-param name="str" select="category" />
+            </xsl:call-template>
 
             <!-- set dummy values, will be replaced in the plugin -->
             <starttime>0</starttime>
@@ -128,9 +135,9 @@
     </xsl:template>
 
     <xsl:template name = "concat" >
-        <xsl:text />
         <xsl:param name = "name" />
 
+        <xsl:text />
         <xsl:for-each select="*[local-name() = $name]">
             <xsl:variable name="i" select="position()" />
 
@@ -147,5 +154,19 @@
                 </xsl:when>
             </xsl:choose>
         </xsl:for-each>
+    </xsl:template>
+
+    <xsl:template name="mapping">
+        <xsl:param name="str" select="." />
+        <xsl:variable name="value" select="translate($str,'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖU', 'abcdefghijklmnopqrstuvwxyzäöü')" />
+        <xsl:variable name="map" select="$categorieMapping[contains($value, .)]/../@name" />
+        <xsl:choose>
+            <xsl:when test="string-length($map)">
+                <category><xsl:value-of select="$map"/></category>
+            </xsl:when>
+            <xsl:otherwise>
+                <category><xsl:text>Sonstige</xsl:text></category>
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
 </xsl:stylesheet>
