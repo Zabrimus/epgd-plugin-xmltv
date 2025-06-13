@@ -28,6 +28,16 @@ inline std::string readXmlFile (const std::string& path) {
     return buf.str();
 }
 
+time_t getEpoch(const char* xmltime) {
+    struct tm buf;
+    buf.tm_isdst = -1;
+
+    strptime(xmltime, "%0Y%0m%0d%H%M%S %z", &buf);
+    time_t epoch = timegm(&buf);
+
+    return epoch;
+}
+
 xsltStylesheetPtr Xmltv::pxsltStylesheet = NULL;
 
 Xmltv::Xmltv() {
@@ -235,11 +245,10 @@ int Xmltv::processDay(int day, int fullupdate, Statistic *stat) {
 
     for (int res = selectDistBySource->find(); res && !obj->doShutDown(); res = selectDistBySource->fetch()) {
         std::string extid = obj->mapDb->getStrValue("ExternalId");
-        std::stringstream filename;
-        filename << extid << "-" << date;
+        std::string filename = extid + "-" + date;
 
         obj->fileDb->clear();
-        obj->fileDb->setValue("name", filename.str().c_str());
+        obj->fileDb->setValue("name", filename.c_str());
         bool inFileRef = selectByTag->find();
 
         std::string eTag = obj->fileDb->getStrValue("Tag");
@@ -249,18 +258,17 @@ int Xmltv::processDay(int day, int fullupdate, Statistic *stat) {
         // Collect image URI's
         collectImageUris(xmlData);
 
-        std::stringstream fileRef;
-        fileRef << extid << "-" << date << "-" << eTag;
+        std::string fileRef = extid + "-" + date + "-" + eTag;
 
-        if (processXml(xmlData, extid, fileRef.str()) != success) {
+        if (processXml(xmlData, extid, fileRef.c_str()) != success) {
             stat->rejected++;
         }
         else {
             obj->fileDb->clear();
-            obj->fileDb->setValue("Name", filename.str().c_str());
+            obj->fileDb->setValue("Name", filename.c_str());
             obj->fileDb->setValue("Source", getSource());
             obj->fileDb->setValue("ExternalId", extid.c_str());
-            obj->fileDb->setValue("FileRef", fileRef.str().c_str());
+            obj->fileDb->setValue("FileRef", fileRef.c_str());
             obj->fileDb->setValue("Tag", eTag.c_str());
             if (inFileRef)
                 obj->fileDb->update();
@@ -348,26 +356,16 @@ int Xmltv::processXml(const std::string &xmlDoc, const std::string &extid, const
             std::string stop;
             std::string duration;
 
+
             char* startProp = (char*) xmlGetProp(node, (xmlChar *) "start");
             char *stopProp = (char*) xmlGetProp(node, (xmlChar *) "stop");
-
-            start = std::string(startProp);
-            stop = std::string(stopProp);
-
-            xmlFree(startProp);
-            xmlFree(stopProp);
-
-            // calculate start time and duration
-            struct tm bufftime;
-            strptime(start.c_str(), "%0Y%0m%0d%H%M%S", &bufftime);
-            time_t startEpoch = mktime(&bufftime);
-
-            strptime(stop.c_str(), "%0Y%0m%0d%H%M%S", &bufftime);
-            time_t stopEpoch = mktime(&bufftime);
 
             for (xmlNodePtr childs = node->xmlChildrenNode; childs && obj->dbConnected(); childs = childs->next) {
                 if (childs->type != XML_ELEMENT_NODE || ((strcmp((char *) childs->name, "starttime") != 0) && (strcmp((char *) childs->name, "duration") != 0)))
                     continue;
+
+                time_t startEpoch = getEpoch(startProp);
+                time_t stopEpoch = getEpoch(stopProp);
 
                 // TODO: Warum müssen hier starttime und duration vertauscht werden?
                 //       Was verstehe ich nicht?
@@ -379,6 +377,9 @@ int Xmltv::processXml(const std::string &xmlDoc, const std::string &extid, const
                     xmlNodeSetContent(childs, (const xmlChar*)std::to_string(startEpoch).c_str());
                 }
             }
+
+            xmlFree(startProp);
+            xmlFree(stopProp);
 
             // create event ..
 
