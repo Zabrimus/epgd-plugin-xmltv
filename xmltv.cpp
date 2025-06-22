@@ -33,7 +33,10 @@ time_t getEpoch(const char* xmltime) {
     buf.tm_isdst = -1;
 
     strptime(xmltime, "%0Y%0m%0d%H%M%S %z", &buf);
+
+    long offset = buf.tm_gmtoff;
     time_t epoch = timegm(&buf);
+    epoch -= offset;
 
     return epoch;
 }
